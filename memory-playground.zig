@@ -9,7 +9,8 @@ pub fn main() !void {
     const test_value = 64; // can we actually allocated 64GB?
     const memory = try allocator.alloc(u8, test_value * one_gb);
     defer allocator.free(memory);
-
-    std.debug.print("Sleeping for {}\n", .{test_value});
-    std.time.sleep(30_000_000_000); // 30 sec
+    
+    const sleep_in_secs = 30;
+    std.debug.print("Sleeping for {} seconds\n", .{sleep_in_secs});
+    std.time.sleep(sleep_in_secs * 1_000_000_000);
 }
