@@ -1,16 +1,27 @@
 const std = @import("std");
 
+const THREAD_COUNT = 128;
+const ALLOC_SIZE = 512 * 1024 * 1024; // 512 MB per thread
+
+fn memory_stress_thread(thread_id: usize) void {
+    var allocator = std.heap.page_allocator;
+    const buffer = allocator.alloc(u8, ALLOC_SIZE) catch return;
+    defer allocator.free(buffer);
+
+    var prng = std.Random.DefaultPrng.init(@intCast(thread_id));
+    for (buffer) |*byte| {
+        byte.* = prng.random().int(u8);
+    }
+    std.debug.print("Thread {d} finished\n", .{thread_id});
+}
+
 pub fn main() !void {
-    std.debug.print("Hello from memory-playground!\n", .{});
-
-    const allocator = std.heap.page_allocator;
-
-    const one_gb = 1_000_000_000;
-    const test_value = 64; // can we actually allocated 64GB?
-    const memory = try allocator.alloc(u8, test_value * one_gb);
-    defer allocator.free(memory);
-    
-    const sleep_in_secs = 30;
-    std.debug.print("Sleeping for {} seconds\n", .{sleep_in_secs});
-    std.time.sleep(sleep_in_secs * 1_000_000_000);
+    var threads: [THREAD_COUNT]std.Thread = undefined;
+    for (&threads, 0..) |*t, i| {
+        t.* = try std.Thread.spawn(.{}, memory_stress_thread, .{@as(usize, i)});
+    }
+    for (&threads) |*t| {
+        t.join();
+    }
+    std.debug.print("All threads finished\n", .{});
 }
